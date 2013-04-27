@@ -1,1 +1,0 @@
-cmd_/home/jacky/FileSystemManger/hack_open.ko := ld -r -m elf_i386 -T /usr/src/linux-headers-3.0.0-29-generic/scripts/module-common.lds --build-id  -o /home/jacky/FileSystemManger/hack_open.ko /home/jacky/FileSystemManger/hack_open.o /home/jacky/FileSystemManger/hack_open.mod.o
