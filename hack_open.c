@@ -77,7 +77,7 @@ static int __init init_get_sys_call_table(void)
 	return 0;
 }
 
-module_init(init_get_sys_call_table);
+
 
 // 模块卸载时被调用
 
@@ -85,6 +85,5 @@ static void __exit exit_get_sys_call_table(void)
 {
 }
 
+module_init(init_get_sys_call_table);
 module_exit(exit_get_sys_call_table);
-
-
