@@ -49,9 +49,9 @@ static int intercept_init(void)
 	#define REPLACE(x) orig_##x = my_call_table[__NR_##x];\
 		my_call_table[__NR_##x] = my_##x
 
-//	REPLACE(open); //替换open函数
+	REPLACE(open); //替换open函数
 //	REPLACE(write);//替换write函数
-	REPLACE(creat);//替换creat函数
+//	REPLACE(creat);//替换creat函数
 	REPLACE(unlink);//替换unlink函数
 	REPLACE(mkdir);
 	return 0;
@@ -75,10 +75,10 @@ static void __exit clean_my_module(void)
 	#define RESTORE(x) my_call_table[__NR_##x] = orig_##x
 
 	orig_cr0 = clear_and_return_cr0();   
-//	RESTORE(open);
+	RESTORE(open);
 //	RESTORE(write);
 	RESTORE(unlink);
-	RESTORE(creat);
+//	RESTORE(creat);
 	RESTORE(mkdir);
 	setback_cr0(orig_cr0);
 }
