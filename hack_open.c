@@ -1,90 +1,87 @@
 #include<linux/module.h>
 #include<linux/kernel.h>
 #include<linux/mm.h>
+#include<linux/init.h>
+#include<linux/syscalls.h>
+#include<asm/unistd.h>
 
+
+#include"my_sys_call.h"
+#include"get_call_table.h"
 // 模块信息
 MODULE_LICENSE("GPL");
 
-// 中断描述符表寄存器结构
+void **my_call_table;//存放系统调用表
+unsigned int orig_cr0;
 
-struct {
-	unsigned short limit;  //界限
-	unsigned int base;       //基地址
-	} __attribute__((packed)) idtr;
-
-// 中断描述符表结构
-
-struct {
-	unsigned short off1;
-	unsigned short sel;
-	unsigned char none, flags;
-	unsigned short off2;
-	} __attribute__((packed)) idt;
-
-//搜索前三个字节等于\xff\x14\x85的内存地址函数
-static void *memsearch(const char *startaddr, size_t offset,
-            const char *needle, size_t needle_len)
+/*clear up WP bit of CR0*/
+unsigned int clear_and_return_cr0(void)
 {
-    const char *begin; 		//起始地址
-    const char *end = (const char *) startaddr + offset - needle_len;//终止地址
-    if (needle_len == 0) 	//无需搜索
-        return (void *) startaddr;    
-    if (__builtin_expect(offset < needle_len, 0))/* offset < needle_len 则返回*/
-        return NULL;
-
-    for (begin = (const char *) startaddr; begin <= end ; ++begin)
-	/*判断内存地址前三个字节是否等于\xff\x14\x85*/
-        if (begin[0] == ((const char *) needle)[0]
-            && !memcmp((const void *) &begin[1],
-                   (const void *) ((const char *) needle+1),needle_len-1))
-            return (void *) begin;
-
-    return NULL;
+	unsigned int cr0 = 0;
+	unsigned int ret;
+	asm volatile("movl %%cr0,%%eax"
+			: "=a"(cr0)
+		     );
+	ret = cr0;
+	cr0 &= 0xfffeffff;//clear the 16 bit of CR0
+	asm volatile("movl %%eax,%%cr0"
+			:
+			: "a"(cr0)
+		    );
+	return ret;
 }
-
-// 查找sys_call_table的地址
-void disp_sys_call_table(void)
+/*set cr0 with new value*/
+void setback_cr0(unsigned val)
 {
-	unsigned int sys_call_off;
-	unsigned int sys_call_table;
-	char sc_asm[100],*p;
-
-	// 获取中断描述符表寄存器的地址
-	asm("sidt %0":"=m"(idtr));
-	printk("addr of idtr: %x\n", (unsigned)&idtr);
-	// 获取0x80中断处理程序的地址,即system_call的地址
-	memcpy(&idt, (char *)idtr.base+8*0x80, sizeof(idt));
-	sys_call_off=((idt.off2<<16)|idt.off1);
-
-	printk("addr of idt 0x80: %x\n", sys_call_off);
-	// 从0x80中断服务例程中搜索sys_call_table的地址
-	memcpy(sc_asm,(void *)sys_call_off,100);
-	p = (char *)memsearch(sc_asm,100,"\xff\x14\x85",3);
-	if(p == NULL)
-		return ;
-	sys_call_table = *(unsigned *)(p+3);
-	if(p)
-		printk("addr of sys_call_table: %x\n",sys_call_table);
-		
+	asm volatile("movl %%eax,%%cr0"
+			:
+			: "a"(val)
+		    );
 }
-
-// 模块载入时被调用
-
-static int __init init_get_sys_call_table(void)
-
+/*替换函数*/
+static int intercept_init(void)
 {
-	disp_sys_call_table();
+	my_call_table = (void **)get_call_table();
+        if(my_call_table == NULL)
+                return -1;
+        else printk("sys_call_table\t%x\n",(unsigned)my_call_table);
+	
+	#define REPLACE(x) orig_##x = my_call_table[__NR_##x];\
+		my_call_table[__NR_##x] = my_##x
+
+//	REPLACE(open); //替换open函数
+//	REPLACE(write);//替换write函数
+	REPLACE(creat);//替换creat函数
+	REPLACE(unlink);//替换unlink函数
+	REPLACE(mkdir);
 	return 0;
 }
+// 模块载入时被调用
+static int __init init_my_module(void)
 
-module_init(init_get_sys_call_table);
-
-// 模块卸载时被调用
-
-static void __exit exit_get_sys_call_table(void)
 {
+	int ret;
+	orig_cr0 = clear_and_return_cr0();
+	ret = intercept_init();
+	setback_cr0(orig_cr0);
+	return ret;
 }
 
-module_exit(exit_get_sys_call_table);
 
 
+/* 模块卸载时被调用，主要是还原系统调用*/
+static void __exit clean_my_module(void)
+{
+	#define RESTORE(x) my_call_table[__NR_##x] = orig_##x
+
+	orig_cr0 = clear_and_return_cr0();   
+//	RESTORE(open);
+//	RESTORE(write);
+	RESTORE(unlink);
+	RESTORE(creat);
+	RESTORE(mkdir);
+	setback_cr0(orig_cr0);
+}
+
+module_init(init_my_module); //初始化模块
+module_exit(clean_my_module); //卸载模块
