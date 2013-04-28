@@ -19,11 +19,9 @@ asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 
 	if(filename != NULL)
 	{
-		ret = orig_open(filename, O_EXCL, mode);
+		ret = orig_open(filename, flags, mode);
 		if(ret == -1)
-	        printk("%s was already existed\n", filename);
-		ret = orig_open(filename, O_CREAT, mode);
-	        printk("%s was created!", filename);
+	        printk("%s was open()\n", filename);
 //		printk("flag == %d\n", flags);
 	}
 
