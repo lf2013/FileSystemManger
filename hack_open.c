@@ -1,3 +1,11 @@
+#ifndef __KERNEL__
+#define __KERNEL__
+#endif
+
+#ifndef MODULE
+#define MODULE
+#endif
+
 #include<linux/module.h>
 #include<linux/kernel.h>
 #include<linux/mm.h>
@@ -5,11 +13,12 @@
 #include<linux/syscalls.h>
 #include<asm/unistd.h>
 
+#include"my_sys_call.h"     //自定义调用表
+#include"get_call_table.h"  //获取系统调用表
 
-#include"my_sys_call.h"
-#include"get_call_table.h"
 // 模块信息
 MODULE_LICENSE("GPL");
+MODULE_AUTHOR("gwcai 2013/4");
 
 void **my_call_table;//存放系统调用表
 unsigned int orig_cr0;
@@ -61,6 +70,7 @@ static int __init init_my_module(void)
 
 {
 	int ret;
+//	ret = nf_register_sockopt(&my_sockops);
 	orig_cr0 = clear_and_return_cr0();
 	ret = intercept_init();
 	setback_cr0(orig_cr0);
@@ -80,6 +90,7 @@ static void __exit clean_my_module(void)
 	RESTORE(unlink);
 //	RESTORE(creat);
 	RESTORE(mkdir);
+//	nf_unregister_sockopt(&my_sockops);
 	setback_cr0(orig_cr0);
 }
 

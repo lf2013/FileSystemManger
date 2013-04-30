@@ -1,7 +1,10 @@
 #include<linux/user.h>
 #include<linux/types.h>
 #include<linux/fcntl.h>
+#include"communication.h"   //内核与用户进程通信数据定义
+
 int ret = 0;  //返回值
+
 /******************************原始系统调用函数表******************************/
 
 asmlinkage ssize_t (*orig_write)(int fd,const void *buf,ssize_t count);
@@ -10,8 +13,8 @@ asmlinkage ssize_t (*orig_read)(int fd,void *buf,size_t count);
 asmlinkage int (*orig_creat)(const char *filename,mode_t mode);
 asmlinkage int (*orig_unlink)(const char *filename);
 asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
-/******************************自定义系统调用函数表****************************/
 
+/******************************自定义系统调用函数表****************************/
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 {
         ret = 0;
