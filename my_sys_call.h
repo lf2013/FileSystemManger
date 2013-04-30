@@ -17,25 +17,34 @@ asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 /******************************自定义系统调用函数表****************************/
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 {
-        ret = 0;
+    ret = 0;
 	printk("call open()\n");
+
 	if(filename != NULL)
 	{
-		ret = orig_open(filename,flags,mode);
-		if(ret != -1)
-	        printk("%s was opened!\n",filename);
+		ret = orig_open(filename, O_EXCL, mode);
+		if(ret == -1)
+	        printk("%s was already existed\n", filename);
+		ret = orig_open(filename, O_CREAT, mode);
+	        printk("%s was created!", filename);
+//		printk("flag == %d\n", flags);
 	}
-        return ret;
+
+    return ret;
 }
+
 asmlinkage ssize_t my_write(int fd,const void *buf,ssize_t count)
 {
 	ssize_t nbytes;
 	printk("call write()\n");
+
 	nbytes = orig_write(fd,buf,count);
 	if(nbytes != 0)
 		printk("向文件 %d 写入 %d 字节\n",fd,nbytes);
+
 	return nbytes;
 }
+
 asmlinkage int my_creat(const char *filename,mode_t mode)
 {
 	ret = 0;
@@ -46,6 +55,7 @@ asmlinkage int my_creat(const char *filename,mode_t mode)
         return ret;
 
 }
+
 asmlinkage int my_unlink(const char *filename)
 {
 	ret = 0;
@@ -69,5 +79,6 @@ asmlinkage int my_mkdir(const char *pathname,mode_t mode)
 			printk("创建目录 %s 成功!\n",pathname);
 	}else
 		printk("拒绝创建!\n");
+
 	return ret;
 }
