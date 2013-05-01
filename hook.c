@@ -18,7 +18,7 @@
 
 // 模块信息
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("gwcai 2013/4");
+MODULE_AUTHOR("github/gwcai 2013/4");
 
 void **my_call_table;//存放系统调用表
 unsigned int orig_cr0;
@@ -70,7 +70,11 @@ static int __init init_my_module(void)
 
 {
 	int ret;
-//	ret = nf_register_sockopt(&my_sockops);
+	/*创建套接字,nl_fd在transmit.h内定义*/
+	nl_fd = netlink_kernel_create(&init_net,NETLINK_TEST,0,kernel_receive,NULL,THIS_MODULE);
+
+	if(!nl_fd)
+		printk("can not create a netlink socket!\n");
 	orig_cr0 = clear_and_return_cr0();
 	ret = intercept_init();
 	setback_cr0(orig_cr0);
@@ -90,8 +94,8 @@ static void __exit clean_my_module(void)
 	RESTORE(unlink);
 //	RESTORE(creat);
 	RESTORE(mkdir);
-//	nf_unregister_sockopt(&my_sockops);
 	setback_cr0(orig_cr0);
+	sock_release(nl_fd->sk_socket);//关闭套接字
 }
 
 module_init(init_my_module); //初始化模块

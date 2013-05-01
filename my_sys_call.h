@@ -1,9 +1,12 @@
 #include<linux/user.h>
 #include<linux/types.h>
 #include<linux/fcntl.h>
-#include"communication.h"   //内核与用户进程通信数据定义
+#include"transmit.h"   //内核与用户进程通信数据定义
+
+#define MAX_MSG 50
 
 int ret = 0;  //返回值
+char data[MAX_MSG];
 
 /******************************原始系统调用函数表******************************/
 
@@ -17,17 +20,29 @@ asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 /******************************自定义系统调用函数表****************************/
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 {
-    ret = 0;
+    	const char *data1 = " was already existed!";
+	const char *data2 = " was created!";
+	const char *data3 = " was opened!" ;
+	memset(data,'\0',MAX_MSG*sizeof(char));	
+	ret = 0;
 	printk("call open()\n");
 
 	if(filename != NULL)
 	{
-		ret = orig_open(filename, O_EXCL, mode);
-		if(ret == -1)
-	        printk("%s was already existed\n", filename);
-		ret = orig_open(filename, O_CREAT, mode);
-	        printk("%s was created!", filename);
-//		printk("flag == %d\n", flags);
+		ret = orig_open(filename, flags, mode);
+
+		if((O_WRONLY | O_CREAT | O_TRUNC) && flags)	//相当于creat(char *filename,mode_t mode)
+		{
+			if(ret == -1)
+			{
+				strcpy(data,filename);
+				send_to_user(strcat(data,data1));
+				printk("%s\n",data);
+			}
+			else	printk("%s was created!\n",filename);
+		}else{
+	        	printk("%s was opened!\n", filename);
+		}
 	}
 
     return ret;
