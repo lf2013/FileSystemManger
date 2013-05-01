@@ -41,7 +41,7 @@ static void kernel_receive(struct sk_buff *skb_1)
 {
         struct sk_buff *skb;
         struct nlmsghdr *nlh = NULL;
-        char *data = "this is a test message from kernel!";
+        char *data = "messages from kernel!";
         printk("begin kernel_receive!\n");
         skb = skb_get(skb_1);
 
@@ -49,13 +49,13 @@ static void kernel_receive(struct sk_buff *skb_1)
                 nlh = (struct nlmsghdr *)skb->data;
                 if((nlh->nlmsg_len >= sizeof(struct nlmsghdr))&&(skb_1->len >= nlh->nlmsg_len)){
                 user_process.pid = nlh->nlmsg_pid;
-                printk("data receive from user are:%s\n",(char *)NLMSG_DATA(nlh));
+                printk("->from user:%s\n",(char *)NLMSG_DATA(nlh));
 
-                 printk("user_pid:%d\n",user_process.pid);
+                printk("->user_pid:%d\n",user_process.pid);
                 send_to_user(data);
                 }
         }else{
-                 printk("data receive from user are:%s\n",(char *)NLMSG_DATA(nlmsg_hdr(skb_1)));
+                printk("->from user:%s\n",(char *)NLMSG_DATA(nlmsg_hdr(skb_1)));
                 send_to_user(data);
         }
         kfree_skb(skb);

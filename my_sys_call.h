@@ -18,6 +18,14 @@ asmlinkage int (*orig_unlink)(const char *filename);
 asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 
 /******************************自定义系统调用函数表****************************/
+void handle_msg(char *filename,const char *data1)
+{
+	memset(data,'\0',MAX_MSG*sizeof(char));
+	strcpy(data,filename);
+        send_to_user(strcat(data,data1));
+        printk("%s\n",data);
+}
+
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 {
     	const char *data1 = " was already existed!";
@@ -33,16 +41,10 @@ asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 
 		if((O_WRONLY | O_CREAT | O_TRUNC) && flags)	//相当于creat(char *filename,mode_t mode)
 		{
-			if(ret == -1)
-			{
-				strcpy(data,filename);
-				send_to_user(strcat(data,data1));
-				printk("%s\n",data);
-			}
-			else	printk("%s was created!\n",filename);
-		}else{
-	        	printk("%s was opened!\n", filename);
-		}
+			if(ret == -1) handle_msg(filename,data1);
+			else handle_msg(filename,data2);
+
+		}else handle_msg(filename,data3);
 	}
 
     return ret;
