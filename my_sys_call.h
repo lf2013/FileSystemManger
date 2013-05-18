@@ -20,20 +20,20 @@ asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 /******************************自定义系统调用函数表****************************/
 void handle_msg(char *filename,const char *data1)
 {
-	memset(data,'\0',MAX_MSG*sizeof(char));
-	strcpy(data,filename);
-        send_to_user(strcat(data,data1));
-        printk("%s\n",data);
+//	memset(data,'\0',MAX_MSG*sizeof(char));
+	//memcpy(data,filename,strlen(filename));
+        send_to_user(filename);
+        //printk("%s\n",filename);
 }
 
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 {
-    	const char *data1 = " was already existed!";
-	const char *data2 = " was created!";
-	const char *data3 = " was opened!" ;
+    	const char *data1 = " exist";
+	const char *data2 = " create";
+	const char *data3 = " opened" ;
 	memset(data,'\0',MAX_MSG*sizeof(char));	
 	ret = 0;
-	printk("call open()\n");
+	//printk("call open()\n");
 
 	if(filename != NULL)
 	{

@@ -1,10 +1,21 @@
 #include<linux/netlink.h>
 #include<net/sock.h>
+#include<linux/string.h>
+#include <linux/spinlock.h>
+
 #define NETLINK_TEST 17
 
+#define F_NUM 20  //文件数
+#define F_LEN 100 //文件名长度
+
+DECLARE_MUTEX(receive_sem); //互斥量
+
+char file_list[F_NUM][F_LEN];
+int count = 0;
 /*用户进程ID结构*/
 struct {
         __u32 pid;
+	rwlock_t lock;  //互斥锁
 }user_process;
 
 static struct sock *nl_fd = NULL;//内核socket
@@ -29,10 +40,10 @@ static int send_to_user(char *buf)
         //设置控制字段
         NETLINK_CB(skb).pid = 0;
         NETLINK_CB(skb).dst_group = 0;
-        printk("skb->data:%s\n",(char *)NLMSG_DATA((struct nlmsghdr *)skb->data));
+        //printk("skb->data:%s\n",(char *)NLMSG_DATA((struct nlmsghdr *)skb->data));
         //发送数据
         ret = netlink_unicast(nl_fd,skb,user_process.pid,MSG_DONTWAIT);
-        printk("netlink_unicast return :%d\n",ret);
+        //printk("netlink_unicast return :%d\n",ret);
         return 0;
 }
 
@@ -41,23 +52,30 @@ static void kernel_receive(struct sk_buff *skb_1)
 {
         struct sk_buff *skb;
         struct nlmsghdr *nlh = NULL;
-        char *data = "messages from kernel!";
-        printk("begin kernel_receive!\n");
+        char *data = "from kernel!";
+        //printk("begin kernel_receive!\n");
         skb = skb_get(skb_1);
 
         if(skb->len >= sizeof(struct nlmsghdr)){
                 nlh = (struct nlmsghdr *)skb->data;
-                if((nlh->nlmsg_len >= sizeof(struct nlmsghdr))&&(skb_1->len >= nlh->nlmsg_len)){
+                if((nlh->nlmsg_len >= sizeof(struct nlmsghdr))&&(skb->len >= nlh->nlmsg_len)){
                 user_process.pid = nlh->nlmsg_pid;
-                printk("->from user:%s\n",(char *)NLMSG_DATA(nlh));
-
-                printk("->user_pid:%d\n",user_process.pid);
-                send_to_user(data);
+                printk("->from_user:%s,len:%d\n",(char *)NLMSG_DATA(nlh),nlh->nlmsg_len);
+		memcpy(file_list[count],NLMSG_DATA(nlh),strlen(NLMSG_DATA(nlh)));
+		printk("file_list[%d]:%s\n",count,file_list[count]);
+		count++;
+                //printk("->user_pid:%d\n",user_process.pid);
+                //send_to_user(data);
+                nlh = NULL;
                 }
         }else{
-                printk("->from user:%s\n",(char *)NLMSG_DATA(nlmsg_hdr(skb_1)));
-                send_to_user(data);
+                printk("->from user different:%s\n",(char *)NLMSG_DATA(nlmsg_hdr(skb_1)));
+                memcpy(file_list[count],NLMSG_DATA(nlmsg_hdr(skb_1)),strlen(NLMSG_DATA(nlmsg_hdr(skb_1))));
+                printk("file_list[%d]:%s\n",count,file_list[count]);
+                count++;
+
+		//send_to_user(data);
         }
         kfree_skb(skb);
+	//kfree_skb(skb_1);
 }
-

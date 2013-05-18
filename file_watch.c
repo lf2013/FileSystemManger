@@ -3,14 +3,14 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <linux/netlink.h>
-
+#include <fcntl.h>
 #define NETLINK_TEST 17
 #define MSG_LEN 100
 
 struct sockaddr_nl local;
 struct sockaddr_nl kaddr;
 int skfd;
-
+char file_list[MSG_LEN];  //用于获取配置文件
 struct msg_to_kernel
 {
         struct nlmsghdr hdr;
@@ -58,7 +58,7 @@ int send_to_kernel(int skfd,char *buf)  //发送信息到内核进程
 
 	memcpy(NLMSG_DATA(message), buf, strlen(buf));
 
-        printf("message sendto kernel are:%s, len:%d\n", (char *)NLMSG_DATA(message), message->nlmsg_len);
+//        printf("message sendto kernel are:%s, len:%d\n", (char *)NLMSG_DATA(message), message->nlmsg_len);
         ret = sendto(skfd, message, message->nlmsg_len, 0,(struct sockaddr *)&kaddr, sizeof(kaddr));
 
 	return ret;
@@ -72,6 +72,24 @@ int receive_message(int skfd,char* msg)
 	memcpy(msg,u_msg.msg,strlen(u_msg.msg));
 	return ret;
 }
+void setProfile(int skfd)
+{
+        FILE *file = fopen("etc","r");
+	if(file == NULL)
+	{
+		printf("open file \"etc\" error!\n");
+		return ;
+	}
+        memset(file_list,'\0',MSG_LEN*sizeof(char));
+        while(fgets(file_list,MSG_LEN,file) != NULL)
+        {
+                file_list[strlen(file_list) -1] = '\0';//去除回车符
+                printf("%s\n",file_list);
+                send_to_kernel(skfd,file_list);
+        }
+	fclose(file);
+}
+
 int main(int argc, char* argv[])
 {
 	char *data = "Let's begin to communicate!";
@@ -82,12 +100,13 @@ int main(int argc, char* argv[])
 	init_sock();
 	
 	/*开始通信之前需要将用户进程ID发送给内核*/
-	ret1 = send_to_kernel(skfd,data); 
-        if(!ret1){
+//	ret1 = send_to_kernel(skfd,data); 
+        setProfile(skfd);
+	if(!ret1){
            	perror("send pid:");
            	exit(-1);
 	}
-       	while(1)
+       	//while(1)
 	{
 		 //接受内核态确认信息
                 ret2 = receive_message(skfd,msg);
@@ -95,7 +114,7 @@ int main(int argc, char* argv[])
                         perror("recv form kerner:");
                         exit(-1);
                 }
-                printf("message receive from kernel:%s\n",msg);
+                printf("->from kernel:%s\n",msg);
 
 	} 
 	close(skfd);
