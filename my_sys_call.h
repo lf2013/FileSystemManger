@@ -18,12 +18,25 @@ asmlinkage int (*orig_unlink)(const char *filename);
 asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 
 /******************************自定义系统调用函数表****************************/
-void handle_msg(char *filename,const char *data1)
+static int handle_msg(char *filename,const char *data1)
 {
-//	memset(data,'\0',MAX_MSG*sizeof(char));
+	int ret = 0;
+	int i = 0;
+	//memset(data,'\0',MAX_MSG*sizeof(char));
 	//memcpy(data,filename,strlen(filename));
-        send_to_user(filename);
-        //printk("%s\n",filename);
+	//if(filename != NULL)
+            //ret = send_to_user(filename);
+        for(i =0 ;i < count; i++)
+	{
+	     if(strncmp(file_list[i],filename,strlen(file_list[i])) == 0)
+	     {
+		printk("file_list[%d]=%s,%s\n",i,file_list[i],filename);
+		//memcpy(data,filename,strlen(filename));
+		//ret = send_to_user(filename);
+		ret = 1;
+	     }
+	}
+	return ret;
 }
 
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
@@ -33,8 +46,8 @@ asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 	const char *data3 = " opened" ;
 	memset(data,'\0',MAX_MSG*sizeof(char));	
 	ret = 0;
-	//printk("call open()\n");
-
+	printk("call open()\n");
+	//send_to_user("call open()");
 	if(filename != NULL)
 	{
 		ret = orig_open(filename, flags, mode);
@@ -49,7 +62,7 @@ asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 
     return ret;
 }
-
+/*
 asmlinkage ssize_t my_write(int fd,const void *buf,ssize_t count)
 {
 	ssize_t nbytes;
@@ -99,3 +112,4 @@ asmlinkage int my_mkdir(const char *pathname,mode_t mode)
 
 	return ret;
 }
+*/
