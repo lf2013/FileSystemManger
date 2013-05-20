@@ -22,11 +22,8 @@ static int handle_msg(char *filename,const char *data1)
 {
 	int ret = 0;
 	int i = 0;
-	//memset(data,'\0',MAX_MSG*sizeof(char));
-	//memcpy(data,filename,strlen(filename));
-	//if(filename != NULL)
-            //ret = send_to_user(filename);
-        for(i =0 ;i < count; i++)
+	
+       for(i =0 ;i < count; i++)
 	{
 	     if(strncmp(file_list[i],filename,strlen(file_list[i])) == 0)
 	     {
@@ -46,8 +43,7 @@ asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 	const char *data3 = " opened" ;
 	memset(data,'\0',MAX_MSG*sizeof(char));	
 	ret = 0;
-	printk("call open()\n");
-	//send_to_user("call open()");
+	//printk("call open()\n");
 	if(filename != NULL)
 	{
 		ret = orig_open(filename, flags, mode);

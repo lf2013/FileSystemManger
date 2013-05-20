@@ -58,19 +58,34 @@ void init_nlmsg()
 int send_to_kernel(int skfd,char *buf)  //发送信息到内核进程
 {
 	int ret;
-        init_nlmsg();
-	strcpy(NLMSG_DATA(nlh), buf);
+       memset(&msg,0,sizeof(msg));
+	memset(nlh, 0, NLMSG_SPACE(MAX_MSG_SIZE));
+	
 
-        ret = sendmsg(skfd,&msg,0); //发送消息
-        printf("to kernel:%s, len:%d\n",(char *)NLMSG_DATA(nlh),nlh->nlmsg_len);
-        return ret;
+       nlh->nlmsg_len = NLMSG_SPACE(MAX_MSG_SIZE);
+       nlh->nlmsg_flags = 0;
+       nlh->nlmsg_type = 0;
+       nlh->nlmsg_seq = 0;
+       nlh->nlmsg_pid = local.nl_pid;
+	strcpy(NLMSG_DATA(nlh), buf);
+	msg.msg_name = (void *)&kaddr;
+       msg.msg_namelen = sizeof(kaddr);
+	iov.iov_base = (void *)nlh;
+       iov.iov_len = NLMSG_SPACE(MAX_MSG_SIZE);
+       msg.msg_name = (void *)&kaddr;
+       msg.msg_namelen = sizeof(kaddr);
+	msg.msg_iov = &iov;
+       msg.msg_iovlen = 1;
+       ret = sendmsg(skfd,&msg,0); //发送消息
+       printf("to kernel:%s, len:%d\n",(char *)NLMSG_DATA(nlh),nlh->nlmsg_len);
+       return ret;
 }
 int receive_message(int skfd,char* buf)
 {
         int ret;
          //接受内核态确认信息
-        init_nlmsg(); 
-	ret = recvmsg(skfd, &msg,0);
+      //  init_nlmsg(); 
+	 ret = recvmsg(skfd, &msg,0);
         strcpy(buf,NLMSG_DATA(nlh));
         printf("receive:%s,len:%d\n",buf,strlen(buf));
         return ret;

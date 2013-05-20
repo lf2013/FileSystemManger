@@ -35,10 +35,10 @@ static int send_to_user(char *buf)
     	}
 	/*分配新的套接字缓存*/
 	skb = alloc_skb(size,GFP_KERNEL);
-	buf[len-1] = '\0';
+	buf[len] = '\0';
 	/*初始化一个netlink消息首部*/
-	nlh = nlmsg_put(skb,user_process.pid,0,NLMSG_NOOP,MAX_MSG_SIZE,0);
-	memcpy(NLMSG_DATA(nlh),buf,len); //填充数据区
+	nlh = nlmsg_put(skb,0,0,0,MAX_MSG_SIZE,0);
+	memcpy(NLMSG_DATA(nlh),buf,len+1); //填充数据区
 	
 	//设置控制字段
 	NETLINK_CB(skb).pid = 0;
@@ -46,9 +46,7 @@ static int send_to_user(char *buf)
 	
 	//printk("skb->data:%s\n",(char *)NLMSG_DATA((struct nlmsghdr *)skb->data));
 	//发送数据
-	read_lock_bh(&lock);
 	ret = netlink_unicast(nl_fd,skb,user_process.pid,MSG_DONTWAIT);
-	read_unlock_bh(&lock);
 	return ret;
 }
 
@@ -60,7 +58,7 @@ static void kernel_receive(struct sk_buff *skb_1)
 	//printk("begin kernel_receive!\n");
 	if(down_trylock(&receive_sem))
 		return;
-	write_lock_bh(&lock);
+	write_lock(&lock);
 	skb = skb_get(skb_1);
 	memset(file_list[count],'\0',sizeof(file_list[count]));
 
@@ -77,7 +75,7 @@ static void kernel_receive(struct sk_buff *skb_1)
 		send_to_user(file_list[count-1]);
 	}
 	kfree_skb(skb);
-	write_unlock_bh(&lock);	
+	write_unlock(&lock);	
 	up(&receive_sem);
 	return ;
 }
