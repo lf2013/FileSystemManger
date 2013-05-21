@@ -18,42 +18,52 @@ asmlinkage int (*orig_unlink)(const char *filename);
 asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 
 /******************************自定义系统调用函数表****************************/
-static int handle_msg(char *filename,const char *data1)
+static int handle_msg(char *filename,char *buf)
 {
-	int ret = 0;
 	int i = 0;
 	
        for(i =0 ;i < count; i++)
 	{
-	     if(strncmp(file_list[i],filename,strlen(file_list[i])) == 0)
+	     if(strcmp(file_list[i],filename) == 0)
 	     {
 		printk("file_list[%d]=%s,%s\n",i,file_list[i],filename);
-		//memcpy(data,filename,strlen(filename));
-		//ret = send_to_user(filename);
-		ret = 1;
+		memset(data,'\0',sizeof(data));
+		strcpy(data,filename);
+		strcat(data,buf);
+		printk(data);
+		return 1;
 	     }
 	}
-	return ret;
+	return 0;
 }
 
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 {
-    	const char *data1 = " exist";
-	const char *data2 = " create";
-	const char *data3 = " opened" ;
-	memset(data,'\0',MAX_MSG*sizeof(char));	
 	ret = 0;
 	//printk("call open()\n");
 	if(filename != NULL)
 	{
 		ret = orig_open(filename, flags, mode);
 
-		if((O_WRONLY | O_CREAT | O_TRUNC) && flags)	//相当于creat(char *filename,mode_t mode)
+		if((O_WRONLY | O_CREAT | O_TRUNC) & flags)//相当于creat(char *filename,mode_t mode)
 		{
-			if(ret == -1) handle_msg(filename,data1);
-			else handle_msg(filename,data2);
-
-		}else handle_msg(filename,data3);
+			if(ret == -1){
+				 if(handle_msg(filename," exist!"))//在白名单中
+				{
+					send_to_user(data);
+				}
+			}else{
+				if(handle_msg(filename," create!"))//在白名单中
+				{
+					send_to_user(data);
+				}
+			}
+		}else{
+			if(handle_msg(filename," open!"))//在白名单中
+			{
+				send_to_user(data);
+			}
+		}
 	}
 
     return ret;

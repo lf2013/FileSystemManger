@@ -29,7 +29,7 @@ static int send_to_user(char *buf)
 	int ret;
 	int len = strlen(buf);
 	size = NLMSG_SPACE(MAX_MSG_SIZE); //报文大小
-	if(user_process.pid < 0 || nl_fd == NULL || buf == NULL)
+	if(user_process.pid <= 0 || nl_fd == NULL || buf == NULL)
     	{
         	return 0;
     	}

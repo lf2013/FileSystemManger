@@ -77,7 +77,7 @@ int send_to_kernel(int skfd,char *buf)  //发送信息到内核进程
 	msg.msg_iov = &iov;
        msg.msg_iovlen = 1;
        ret = sendmsg(skfd,&msg,0); //发送消息
-       printf("to kernel:%s, len:%d\n",(char *)NLMSG_DATA(nlh),nlh->nlmsg_len);
+       //printf("to kernel:%s, len:%d\n",(char *)NLMSG_DATA(nlh),nlh->nlmsg_len);
        return ret;
 }
 int receive_message(int skfd,char* buf)
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
                         perror("recv form kerner:");
                         exit(-1);
                 }
-                printf("->from kernel:%s\n",buf);
+                //printf("->from kernel:%s\n",buf);
 
 	} 
 	close(skfd);
