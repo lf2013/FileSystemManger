@@ -46,7 +46,9 @@ static int send_to_user(char *buf)
 	
 	//printk("skb->data:%s\n",(char *)NLMSG_DATA((struct nlmsghdr *)skb->data));
 	//发送数据
+	//read_lock_bh(&lock);
 	ret = netlink_unicast(nl_fd,skb,user_process.pid,MSG_DONTWAIT);
+	//read_unlock_bh(&lock);
 	return ret;
 }
 
@@ -69,7 +71,7 @@ static void kernel_receive(struct sk_buff *skb_1)
 
 		printk("from_user:%s\n",(char *)NLMSG_DATA(nlh));
 		memcpy(file_list[count],NLMSG_DATA(nlh),strlen(NLMSG_DATA(nlh)));
-		printk("file_list[%d]:%s\n",count,file_list[count]);
+		//printk("file_list[%d]:%s\n",count,file_list[count]);
 		count++;	
 		 //printk("user_pid:%d\n",user_process.pid);
 		send_to_user(file_list[count-1]);

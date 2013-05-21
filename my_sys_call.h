@@ -21,20 +21,20 @@ asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 static int handle_msg(char *filename,char *buf)
 {
 	int i = 0;
-	
+	int ret = 0;
        for(i =0 ;i < count; i++)
 	{
 	     if(strcmp(file_list[i],filename) == 0)
 	     {
-		printk("file_list[%d]=%s,%s\n",i,file_list[i],filename);
+		//printk("file_list[%d]=%s,%s\n",i,file_list[i],filename);
 		memset(data,'\0',sizeof(data));
 		strcpy(data,filename);
 		strcat(data,buf);
-		printk(data);
-		return 1;
+		printk("%s\n",data);
+		ret = 1;
 	     }
 	}
-	return 0;
+	return ret;
 }
 
 asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
