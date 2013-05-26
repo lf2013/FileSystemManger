@@ -12,8 +12,15 @@
 DEFINE_RWLOCK(lock); //定义读写锁,相当于rwlock_t lock;rwlock_init(lock);
 DECLARE_MUTEX(receive_sem); //声明信号量
 
-char file_list[F_NUM][F_LEN];
-int count = 0;
+char file_list_b[F_NUM][F_LEN]; //黑名单列表
+char file_list_w[F_NUM][F_LEN]; //白名单列表
+
+int count_b = 0; //黑名单数量
+int count_w = 0; //白名单数量
+
+char receive[100];
+struct sk_buff *skb_1;
+
 /*用户进程ID结构*/
 struct {
         __u32 pid;
@@ -46,9 +53,7 @@ static int send_to_user(char *buf)
 	
 	//printk("skb->data:%s\n",(char *)NLMSG_DATA((struct nlmsghdr *)skb->data));
 	//发送数据
-	//read_lock_bh(&lock);
 	ret = netlink_unicast(nl_fd,skb,user_process.pid,MSG_DONTWAIT);
-	//read_unlock_bh(&lock);
 	return ret;
 }
 
@@ -56,25 +61,41 @@ static void kernel_receive(struct sk_buff *skb_1)
 {
 	struct sk_buff *skb;
 	struct nlmsghdr *nlh = NULL;
-	char *data = "this is a test message from kernel!";
+
+	//char *data = "this is a test message from kernel!";
 	//printk("begin kernel_receive!\n");
 	if(down_trylock(&receive_sem))
 		return;
 	write_lock(&lock);
 	skb = skb_get(skb_1);
-	memset(file_list[count],'\0',sizeof(file_list[count]));
 
+	memset(file_list_w[count_w],'\0',sizeof(file_list_w[count_w]));
+	memset(file_list_b[count_b],'\0',sizeof(file_list_b[count_b]));
+	memset(receive,'\0',sizeof(receive));
 	if(skb->len >= sizeof(struct nlmsghdr)){
 		nlh = nlmsg_hdr(skb);
 
 		user_process.pid = nlh->nlmsg_pid;
 
 		printk("from_user:%s\n",(char *)NLMSG_DATA(nlh));
-		memcpy(file_list[count],NLMSG_DATA(nlh),strlen(NLMSG_DATA(nlh)));
-		//printk("file_list[%d]:%s\n",count,file_list[count]);
-		count++;	
-		 //printk("user_pid:%d\n",user_process.pid);
-		send_to_user(file_list[count-1]);
+		int len = strlen(NLMSG_DATA(nlh));
+		memcpy(receive,NLMSG_DATA(nlh),len);
+		if(receive[len - 1] == 'W') //最后一个字符
+		{
+			receive[len -1] = '\0';
+			memcpy(file_list_w[count_w],receive,strlen(receive));
+			
+			printk("file_list_w[%d]:%s\n",count_w,file_list_w[count_w]);
+			count_w++;	
+		 	//printk("user_pid:%d\n",user_process.pid);
+		 }else if(receive[len - 1] == 'B'){
+			receive[len -1] = '\0';
+                        memcpy(file_list_b[count_b],receive,strlen(receive));
+
+                        printk("file_list_b[%d]:%s\n",count_b,file_list_b[count_b]);
+                        count_b++;
+		}		
+		send_to_user(receive);
 	}
 	kfree_skb(skb);
 	write_unlock(&lock);	

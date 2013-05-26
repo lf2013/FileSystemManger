@@ -75,10 +75,11 @@ int receive_message(int skfd,char* buf)
         printf("receive:%s,len:%d\n",buf,strlen(buf));
         return ret;
 }
-int setProfile(int skfd)
+int setProfile(FILE *file,char c)
 {
-        FILE *file = fopen("etc","r");
+
 	int ret = 0;
+	int len = 0;
 	if(file == NULL)
 	{
 		printf("open file \"etc\" error!\n");
@@ -87,9 +88,11 @@ int setProfile(int skfd)
         memset(file_list,'\0',MSG_LEN*sizeof(char));
         while(fgets(file_list,MSG_LEN,file) != NULL)
         {
+		len = strlen(file_list);
                 if(file_list[0] != '#')
 		{
-			file_list[strlen(file_list) -1] = '\0';//去除回车符
+			file_list[len -1] = c;//添加白名单标志
+			file_list[len] = '\0';
                 	printf("%s\n",file_list);
                 	ret = send_to_kernel(skfd,file_list);
 		}
@@ -102,6 +105,8 @@ int main(int argc, char* argv[])
 {
 	char *data = "Let's begin to communicate!";
 	char buf[100];
+	
+        FILE *file;
         //初始化
         int ret1,ret2;
 	int i = 3;
@@ -109,7 +114,13 @@ int main(int argc, char* argv[])
 	
 	/*开始通信之前需要将用户进程ID发送给内核*/
 	//ret1 = send_to_kernel(skfd,data); 
-       ret1 = setProfile(skfd);
+	/*发送白名单*/
+        file = fopen("etc_white","r");
+	ret1 = setProfile(file,'W');
+	/*发送黑名单*/	
+	file = fopen("etc_black","r");
+	ret1 = setProfile(file,'B');
+
 	if(!ret1){
            	perror("send pid:");
            	exit(-1);

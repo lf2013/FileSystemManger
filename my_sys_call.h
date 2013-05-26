@@ -3,7 +3,7 @@
 #include<linux/fcntl.h>
 #include"transmit.h"   //内核与用户进程通信数据定义
 
-#define MAX_MSG 50
+#define MAX_MSG 1024
 
 int ret = 0;  //返回值
 char data[MAX_MSG];
@@ -18,13 +18,30 @@ asmlinkage int (*orig_unlink)(const char *filename);
 asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 
 /******************************自定义系统调用函数表****************************/
-static int handle_msg(char *filename,char *buf)
+
+static int in_black_filelist(char *filename,char *buf)  //是否在黑名单列表中
+{
+	int i = 0;
+	for(i =0;i < count_b;i++)
+	{
+		if(strncmp(file_list_b[i],filename,strlen(file_list_b[i])) == 0)
+		{
+		memset(data,'\0',sizeof(data));
+                strcpy(data,filename);
+                strcat(data,buf);
+                printk("%s\n",data);
+		return 1;
+		}
+	}
+	return 0;
+}
+static int handle_msg(char *filename,char *buf) //在白名单中
 {
 	int i = 0;
 	int ret = 0;
-       for(i =0 ;i < count; i++)
+       for(i =0 ;i < count_w; i++)
 	{
-	     if(strcmp(file_list[i],filename) == 0)
+	     if(strcmp(file_list_w[i],filename) == 0)
 	     {
 		//printk("file_list[%d]=%s,%s\n",i,file_list[i],filename);
 		memset(data,'\0',sizeof(data));
@@ -32,6 +49,7 @@ static int handle_msg(char *filename,char *buf)
 		strcat(data,buf);
 		printk("%s\n",data);
 		ret = 1;
+		break;
 	     }
 	}
 	return ret;
@@ -43,6 +61,11 @@ asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 	//printk("call open()\n");
 	if(filename != NULL)
 	{
+		if(in_black_filelist(filename," 在黑名单中，你无法打开该文件或目录!"))
+		{	
+			send_to_user(data);
+			return 0;
+		}
 		ret = orig_open(filename, flags, mode);
 
 		if((O_WRONLY | O_CREAT | O_TRUNC) & flags)//相当于creat(char *filename,mode_t mode)
