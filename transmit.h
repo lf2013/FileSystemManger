@@ -8,7 +8,7 @@
 #define F_NUM 20  //文件数
 #define F_LEN 100 //文件名长度
 #define MAX_MSG_SIZE 1024
-
+#define MSG_CLOSE 101
 DEFINE_RWLOCK(lock); //定义读写锁,相当于rwlock_t lock;rwlock_init(lock);
 DECLARE_MUTEX(receive_sem); //声明信号量
 
@@ -74,28 +74,39 @@ static void kernel_receive(struct sk_buff *skb_1)
 	memset(receive,'\0',sizeof(receive));
 	if(skb->len >= sizeof(struct nlmsghdr)){
 		nlh = nlmsg_hdr(skb);
-
-		user_process.pid = nlh->nlmsg_pid;
-
-		printk("from_user:%s\n",(char *)NLMSG_DATA(nlh));
-		int len = strlen(NLMSG_DATA(nlh));
-		memcpy(receive,NLMSG_DATA(nlh),len);
-		if(receive[len - 1] == 'W') //最后一个字符
+		if(nlh->nlmsg_type == MSG_CLOSE)  //应用程序关闭
 		{
-			receive[len -1] = '\0';
-			memcpy(file_list_w[count_w],receive,strlen(receive));
-			
-			printk("file_list_w[%d]:%s\n",count_w,file_list_w[count_w]);
-			count_w++;	
-		 	//printk("user_pid:%d\n",user_process.pid);
-		 }else if(receive[len - 1] == 'B'){
-			receive[len -1] = '\0';
-                        memcpy(file_list_b[count_b],receive,strlen(receive));
+		  if(nlh->nlmsg_pid == user_process.pid)
+		  {
+		     printk("%d %s\n",nlh->nlmsg_pid,(char*)NLMSG_DATA(nlh));
+		     user_process.pid = 0;
+			/*计数清零*/
+		     count_b = 0;
+		     count_w = 0;
+		  }
+		}else{
+			user_process.pid = nlh->nlmsg_pid;
 
-                        printk("file_list_b[%d]:%s\n",count_b,file_list_b[count_b]);
-                        count_b++;
-		}		
-		send_to_user(receive);
+			printk("from_user:%s\n",(char *)NLMSG_DATA(nlh));
+			int len = strlen(NLMSG_DATA(nlh));
+			memcpy(receive,NLMSG_DATA(nlh),len);
+			if(receive[len - 1] == 'W') //最后一个字符
+			{
+				receive[len -1] = '\0';
+				memcpy(file_list_w[count_w],receive,strlen(receive));
+			
+				printk("file_list_w[%d]:%s\n",count_w,file_list_w[count_w]);
+				count_w++;	
+		 		//printk("user_pid:%d\n",user_process.pid);
+		 	}else if(receive[len - 1] == 'B'){
+				receive[len -1] = '\0';
+                        	memcpy(file_list_b[count_b],receive,strlen(receive));
+
+                        	printk("file_list_b[%d]:%s\n",count_b,file_list_b[count_b]);
+                        	count_b++;
+			}		
+			send_to_user(receive);
+		}
 	}
 	kfree_skb(skb);
 	write_unlock(&lock);	

@@ -22,6 +22,7 @@ asmlinkage int (*orig_mkdir)(const char *pathname,mode_t mode);
 static int in_black_filelist(char *filename,char *buf)  //是否在黑名单列表中
 {
 	int i = 0;
+	int ret = 0;
 	for(i =0;i < count_b;i++)
 	{
 		if(strncmp(file_list_b[i],filename,strlen(file_list_b[i])) == 0)
@@ -30,10 +31,10 @@ static int in_black_filelist(char *filename,char *buf)  //是否在黑名单列�
                 strcpy(data,filename);
                 strcat(data,buf);
                 printk("%s\n",data);
-		return 1;
+		ret = 1;
 		}
 	}
-	return 0;
+	return ret;
 }
 static int handle_msg(char *filename,char *buf) //在白名单中
 {
@@ -49,7 +50,7 @@ static int handle_msg(char *filename,char *buf) //在白名单中
 		strcat(data,buf);
 		printk("%s\n",data);
 		ret = 1;
-		break;
+		//break;
 	     }
 	}
 	return ret;

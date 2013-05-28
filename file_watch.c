@@ -4,10 +4,11 @@
 #include <string.h>
 #include <linux/netlink.h>
 #include <fcntl.h>
-
+#include <signal.h>
 #define NETLINK_TEST 17
 #define MSG_LEN 100
 #define MAX_MSG_SIZE 1024
+#define MSG_CLOSE 101
 
 struct sockaddr_nl local;
 struct sockaddr_nl kaddr;
@@ -39,7 +40,7 @@ int init_sock()
         kaddr.nl_pid = 0;
         kaddr.nl_groups = 0;
 }
-int send_to_kernel(int skfd,char *buf)  //发送信息到内核进程
+int send_to_kernel(int skfd,char *buf,int msg_type)  //发送信息到内核进程
 {
 	 int ret;
         memset(&msg,0,sizeof(msg));
@@ -47,7 +48,7 @@ int send_to_kernel(int skfd,char *buf)  //发送信息到内核进程
 
         nlh->nlmsg_len = NLMSG_SPACE(MAX_MSG_SIZE);
         nlh->nlmsg_flags = 0;
-        nlh->nlmsg_type = 0;
+        nlh->nlmsg_type = msg_type;
         nlh->nlmsg_seq = 0;
         nlh->nlmsg_pid = local.nl_pid;
 	 strcpy(NLMSG_DATA(nlh), buf);
@@ -89,22 +90,30 @@ int setProfile(FILE *file,char c)
         while(fgets(file_list,MSG_LEN,file) != NULL)
         {
 		len = strlen(file_list);
-                if(file_list[0] != '#')
+                if(file_list[0] != '#') //过滤注释
 		{
 			file_list[len -1] = c;//添加白名单标志
-			file_list[len] = '\0';
+			//file_list[len] = '\0';
                 	printf("%s\n",file_list);
-                	ret = send_to_kernel(skfd,file_list);
+                	ret = send_to_kernel(skfd,file_list,0);
 		}
         }
 	fclose(file);
 	return ret;
 }
-
+static void sig_init(int signol)
+{
+	send_to_kernel(skfd,"user process exit!",MSG_CLOSE);
+	printf("user process exit!\n");
+	if(skfd)
+		close(skfd);
+	exit(0);
+}
 int main(int argc, char* argv[])
 {
 	char *data = "Let's begin to communicate!";
 	char buf[100];
+	char c;
 	
         FILE *file;
         //初始化
@@ -125,6 +134,7 @@ int main(int argc, char* argv[])
            	perror("send pid:");
            	exit(-1);
 	}
+	signal(SIGINT,sig_init);//退出信号
        while(1)
 	{
 		bzero(buf,sizeof(buf));
