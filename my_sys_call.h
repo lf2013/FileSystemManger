@@ -32,6 +32,7 @@ static int in_black_filelist(char *filename,char *buf)  //是否在黑名单列�
                 strcat(data,buf);
                 printk("%s\n",data);
 		ret = 1;
+		break;
 		}
 	}
 	return ret;
@@ -50,7 +51,7 @@ static int handle_msg(char *filename,char *buf) //在白名单中
 		strcat(data,buf);
 		printk("%s\n",data);
 		ret = 1;
-		//break;
+		break;
 	     }
 	}
 	return ret;
@@ -96,7 +97,7 @@ asmlinkage int my_open(char __user *filename,int flags,mode_t mode)
 asmlinkage ssize_t my_write(int fd,const void *buf,ssize_t count)
 {
 	ssize_t nbytes;
-	printk("call write()\n");
+	//printk("call write()\n");
 
 	nbytes = orig_write(fd,buf,count);
 	if(nbytes != 0)
@@ -105,41 +106,53 @@ asmlinkage ssize_t my_write(int fd,const void *buf,ssize_t count)
 	return nbytes;
 }
 
-asmlinkage int my_creat(const char *filename,mode_t mode)
+asmlinkage int my_creat(char *filename,mode_t mode)
 {
 	ret = 0;
-	printk("call creat()\n");
+	//printk("call creat()\n");
+	if(in_black_filelist(filename," 当前目录在黑名单中，你无法在该目录创建文件或目录!"))
+        {
+                send_to_user(data);
+                return 0;
+        }
+
 	ret = orig_creat(filename,mode);
-	if(ret != -1)
-       		 printk("file %s was created!\n",filename);
+	if(ret != -1 && handle_msg(filename," created by system call of create!"))
+		send_to_user(data);
         return ret;
 
 }
 
-asmlinkage int my_unlink(const char *filename)
+asmlinkage int my_unlink(char *filename)
 {
 	ret = 0;
-	printk("call unlink()\n");
+	//printk("call unlink()\n");
+	if(in_black_filelist(filename," in the black file list,you cannot unlink it!"))
+        {
+                send_to_user(data);
+                return 0;
+        }
+	
 	ret = orig_unlink(filename);
-	if(ret != -1)
-       		 printk("file %s was unlinked!\n",filename);
-	return ret;
-}
-
-asmlinkage int my_mkdir(const char *pathname,mode_t mode)
-{
-	ret = 0;
-	printk("call mkdir()\n");
-	if(strcmp(pathname,"mydir") != 0)
-	{
-		ret = orig_mkdir(pathname,mode);
-		if(ret == -1)
-			printk("创建目录 %s 失败!\n",pathname);
-		else
-			printk("创建目录 %s 成功!\n",pathname);
-	}else
-		printk("拒绝创建!\n");
-
+	if(ret != -1 && handle_msg(filename," was unlinked!"))
+		send_to_user(data);
 	return ret;
 }
 */
+asmlinkage int my_mkdir(char *pathname,mode_t mode)
+{
+	ret = 0;
+	//printk("call mkdir()\n");
+	if(in_black_filelist(pathname," in the black file list,you cannot create it!"))
+	{
+		send_to_user(data);
+		return 0;
+	}
+	ret = orig_mkdir(pathname,mode);
+	if(ret != -1 && handle_msg(pathname," dir create success!"))
+                send_to_user(data);
+	else
+		send_to_user(strcat(pathname," create failed!"));
+
+	return ret;
+}

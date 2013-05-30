@@ -62,7 +62,7 @@ static int intercept_init(void)
 //	REPLACE(write);//替换write函数
 //	REPLACE(creat);//替换creat函数
 //	REPLACE(unlink);//替换unlink函数
-//	REPLACE(mkdir);
+	REPLACE(mkdir);
 	return 0;
 }
 // 模块载入时被调用
@@ -93,7 +93,7 @@ static void __exit clean_my_module(void)
 //	RESTORE(write);
 //	RESTORE(unlink);
 //	RESTORE(creat);
-//	RESTORE(mkdir);
+	RESTORE(mkdir);
 	setback_cr0(orig_cr0);
 	sock_release(nl_fd->sk_socket);//关闭套接字
 }
