@@ -10,7 +10,7 @@
 #define MAX_MSG_SIZE 1024
 #define MSG_CLOSE 101
 DEFINE_RWLOCK(lock); //定义读写锁,相当于rwlock_t lock;rwlock_init(lock);
-DECLARE_MUTEX(receive_sem); //声明信号量
+//DECLARE_MUTEX(receive_sem); //声明信号量
 
 char file_list_b[F_NUM][F_LEN]; //黑名单列表
 char file_list_w[F_NUM][F_LEN]; //白名单列表
@@ -64,8 +64,8 @@ static void kernel_receive(struct sk_buff *skb_1)
 	int len,u_len;
 	//char *data = "this is a test message from kernel!";
 	//printk("begin kernel_receive!\n");
-	if(down_trylock(&receive_sem))
-		return;
+	//if(down_trylock(&receive_sem))
+	//	return;
 	write_lock(&lock);
 	skb = skb_get(skb_1);
 
@@ -110,6 +110,6 @@ static void kernel_receive(struct sk_buff *skb_1)
 	}
 	kfree_skb(skb);
 	write_unlock(&lock);	
-	up(&receive_sem);
+	//up(&receive_sem);
 	return ;
 }
