@@ -138,7 +138,7 @@ asmlinkage int my_unlink(char *filename)
 		send_to_user(data);
 	return ret;
 }
-*/
+
 asmlinkage int my_mkdir(char *pathname,mode_t mode)
 {
 	ret = 0;
@@ -155,4 +155,4 @@ asmlinkage int my_mkdir(char *pathname,mode_t mode)
 		send_to_user(strcat(pathname," create failed!"));
 
 	return ret;
-}
+}*/

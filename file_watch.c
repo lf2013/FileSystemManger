@@ -93,7 +93,7 @@ int setProfile(FILE *file,char c)
                 if(file_list[0] != '#') //过滤注释
 		{
 			file_list[len -1] = c;//添加白名单标志
-			file_list[len] = '\0';
+			file_list[len] = '\0';//长度
                 	printf("%s\n",file_list);
                 	ret = send_to_kernel(skfd,file_list,0);
 		}

@@ -61,7 +61,7 @@ static void kernel_receive(struct sk_buff *skb_1)
 {
 	struct sk_buff *skb;
 	struct nlmsghdr *nlh = NULL;
-
+	int len,u_len;
 	//char *data = "this is a test message from kernel!";
 	//printk("begin kernel_receive!\n");
 	if(down_trylock(&receive_sem))
@@ -88,19 +88,19 @@ static void kernel_receive(struct sk_buff *skb_1)
 			user_process.pid = nlh->nlmsg_pid;
 
 			printk("from_user:%s\n",(char *)NLMSG_DATA(nlh));
-			int len = strlen(NLMSG_DATA(nlh));
+			len = strlen(NLMSG_DATA(nlh));
 			memcpy(receive,NLMSG_DATA(nlh),len);
 			if(receive[len - 1] == 'W') //最后一个字符
 			{
 				receive[len -1] = '\0';
-				memcpy(file_list_w[count_w],receive,strlen(receive));
+				memcpy(file_list_w[count_w],receive,len-1);
 			
 				printk("file_list_w[%d]:%s\n",count_w,file_list_w[count_w]);
 				count_w++;	
 		 		//printk("user_pid:%d\n",user_process.pid);
 		 	}else if(receive[len - 1] == 'B'){
 				receive[len -1] = '\0';
-                        	memcpy(file_list_b[count_b],receive,strlen(receive));
+                        	memcpy(file_list_b[count_b],receive,len-1);
 
                         	printk("file_list_b[%d]:%s\n",count_b,file_list_b[count_b]);
                         	count_b++;
